@@ -1,0 +1,139 @@
+name: Automatic License Activation
+on:
+  issues:
+    types: [opened, edited]
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight for reactivation checks
+
+jobs:
+  process-activation:
+    runs-on: ubuntu-latest
+    if: github.event.issue.pull_request == null
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Load Configuration
+        id: config
+        run: |
+          if [ -f "config/activation-config.json" ]; then
+            CONFIG=$(cat config/activation-config.json)
+            echo "auto_approve=$(echo $CONFIG | jq -r '.activation_settings.auto_approve')" >> $GITHUB_OUTPUT
+            echo "max_licenses=$(echo $CONFIG | jq -r '.activation_settings.max_licenses')" >> $GITHUB_OUTPUT
+            echo "reactivation_enabled=$(echo $CONFIG | jq -r '.activation_settings.reactivation_enabled')" >> $GITHUB_OUTPUT
+          else
+            echo "auto_approve=true" >> $GITHUB_OUTPUT
+            echo "max_licenses=100" >> $GITHUB_OUTPUT
+            echo "reactivation_enabled=true" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Validate Request
+        id: validate
+        run: |
+          python3 scripts/validate-request.py "${{ github.event.issue.title }}" "${{ github.event.issue.body }}"
+      
+      - name: Check License Limits
+        id: limits
+        run: |
+          ACTIVE_COUNT=$(find data/active-licenses -name "*.json" 2>/dev/null | wc -l)
+          echo "active_count=$ACTIVE_COUNT" >> $GITHUB_OUTPUT
+          if [ $ACTIVE_COUNT -ge ${{ steps.config.outputs.max_licenses }} ]; then
+            echo "limit_exceeded=true" >> $GITHUB_OUTPUT
+          else
+            echo "limit_exceeded=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Generate License
+        id: generate
+        if: steps.config.outputs.auto_approve == 'true' && steps.limits.outputs.limit_exceeded == 'false'
+        run: |
+          python3 scripts/generate-license.py \
+            --fingerprint "${{ steps.validate.outputs.fingerprint }}" \
+            --company "${{ steps.validate.outputs.company }}" \
+            --email "${{ steps.validate.outputs.email }}" \
+            --duration 30
+      
+      - name: Create License File
+        if: steps.config.outputs.auto_approve == 'true' && steps.limits.outputs.limit_exceeded == 'false'
+        run: |
+          LICENSE_FILE="data/active-licenses/license-${{ steps.validate.outputs.fingerprint }}.json"
+          echo "${{ steps.generate.outputs.license_data }}" > $LICENSE_FILE
+          
+          # Create license history entry
+          HISTORY_FILE="data/license-history/license-${{ steps.validate.outputs.fingerprint }}-$(date +%Y%m%d-%H%M%S).json"
+          echo "${{ steps.generate.outputs.license_data }}" > $HISTORY_FILE
+          
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add $LICENSE_FILE $HISTORY_FILE
+          git commit -m "Auto-generated license for ${{ steps.validate.outputs.company }}"
+          git push
+      
+      - name: Close Issue with License Info
+        if: steps.config.outputs.auto_approve == 'true' && steps.limits.outputs.limit_exceeded == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ **License Approved and Generated Automatically**\n\n' +
+                    'Your license has been created and is available for download.\n\n' +
+                    '**License Details:**\n' +
+                    '- Company: ${{ steps.validate.outputs.company }}\n' +
+                    '- Hardware Fingerprint: ${{ steps.validate.outputs.fingerprint }}\n' +
+                    '- License Key: ${{ steps.generate.outputs.license_key }}\n' +
+                    '- Expires: ${{ steps.generate.outputs.expires_date }}\n\n' +
+                    'Your client application should automatically download the license within a few minutes.\n\n' +
+                    '**Next Steps:**\n' +
+                    '1. Your client will automatically check for the license\n' +
+                    '2. The license will be downloaded and installed\n' +
+                    '3. Your application will start normally\n' +
+                    '4. The license will automatically renew in 30 days'
+            });
+            
+            github.rest.issues.update({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed'
+            });
+      
+      - name: Reject Request
+        if: steps.config.outputs.auto_approve == 'false' || steps.limits.outputs.limit_exceeded == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let reason = '';
+            if ('${{ steps.config.outputs.auto_approve }}' === 'false') {
+              reason = 'Automatic approval is currently disabled by the host. Please contact the administrator.';
+            } else if ('${{ steps.limits.outputs.limit_exceeded }}' === 'true') {
+              reason = 'Maximum license limit reached. Please contact the administrator for assistance.';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ **License Request Rejected**\n\n' + reason + '\n\n' +
+                    '**Current Status:**\n' +
+                    '- Auto-approval: ${{ steps.config.outputs.auto_approve }}\n' +
+                    '- Active licenses: ${{ steps.limits.outputs.active_count }}\n' +
+                    '- Max licenses: ${{ steps.config.outputs.max_licenses }}\n\n' +
+                    'Please contact the system administrator for assistance.'
+            });
+            
+            github.rest.issues.update({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed'
+            });
