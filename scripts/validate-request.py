@@ -7,6 +7,7 @@ Validates activation requests and extracts required information
 import json
 import re
 import sys
+import os
 import argparse
 from datetime import datetime
 
@@ -94,19 +95,35 @@ def main():
     info = extract_issue_info(args.title, args.body)
     
     if info['valid']:
-        # Output valid information for GitHub Actions
+        # Output valid information for GitHub Actions (new format)
+        github_output = os.environ.get('GITHUB_OUTPUT')
+        if github_output:
+            with open(github_output, 'a') as f:
+                f.write(f"fingerprint={info['fingerprint']}\n")
+                f.write(f"company={info['company']}\n")
+                f.write(f"email={info['email']}\n")
+                f.write(f"name={info['name'] or ''}\n")
+                f.write(f"valid=true\n")
+                f.write(f"info={json.dumps(info)}\n")
+        
+        # Legacy format for compatibility
         print(f"::set-output name=fingerprint::{info['fingerprint']}")
         print(f"::set-output name=company::{info['company']}")
         print(f"::set-output name=email::{info['email']}")
         print(f"::set-output name=name::{info['name'] or ''}")
         print(f"::set-output name=valid::true")
-        
-        # Also output as JSON for debugging
         print(f"::set-output name=info::{json.dumps(info)}")
         
         sys.exit(0)
     else:
-        # Output errors
+        # Output errors (new format)
+        github_output = os.environ.get('GITHUB_OUTPUT')
+        if github_output:
+            with open(github_output, 'a') as f:
+                f.write(f"valid=false\n")
+                f.write(f"errors={json.dumps(info['errors'])}\n")
+        
+        # Legacy format for compatibility
         print(f"::set-output name=valid::false")
         print(f"::set-output name=errors::{json.dumps(info['errors'])}")
         
