@@ -64,11 +64,27 @@ jobs:
         if: steps.config.outputs.auto_approve == 'true' && steps.limits.outputs.limit_exceeded == 'false'
         run: |
           LICENSE_FILE="data/active-licenses/license-${{ steps.validate.outputs.fingerprint }}.json"
-          echo "${{ steps.generate.outputs.license_data }}" > $LICENSE_FILE
+          # Create proper JSON license file
+          cat > $LICENSE_FILE << EOF
+          {
+            "license_key": "${{ steps.generate.outputs.license_key }}",
+            "hardware_fingerprint": "${{ steps.validate.outputs.fingerprint }}",
+            "company_name": "${{ steps.validate.outputs.company }}",
+            "contact_email": "${{ steps.validate.outputs.email }}",
+            "created_date": "$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)",
+            "expires_date": "${{ steps.generate.outputs.expires_date }}",
+            "status": "active",
+            "version": "3.2.0",
+            "auto_generated": true,
+            "reactivation_required": true,
+            "generated_by": "github-actions",
+            "generation_method": "automated"
+          }
+          EOF
           
           # Create license history entry
           HISTORY_FILE="data/license-history/license-${{ steps.validate.outputs.fingerprint }}-$(date +%Y%m%d-%H%M%S).json"
-          echo "${{ steps.generate.outputs.license_data }}" > $HISTORY_FILE
+          cp $LICENSE_FILE $HISTORY_FILE
           
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
