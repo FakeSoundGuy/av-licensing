@@ -123,7 +123,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '❌ **License Request Rejected**\n\n' + reason + '\n\n' +
+              body: ' **License Request Rejected**\n\n' + reason + '\n\n' +
                     '**Current Status:**\n' +
                     '- Auto-approval: ${{ steps.config.outputs.auto_approve }}\n' +
                     '- Active licenses: ${{ steps.limits.outputs.active_count }}\n' +
