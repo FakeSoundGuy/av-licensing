@@ -4,7 +4,7 @@
     "max_licenses": 100,
     "license_duration_days": 30,
     "reactivation_enabled": true,
-    "notification_email": "host@company.com"
+    "notification_email": "chengchao.josh.huang@gmail.com"
   },
   "security_settings": {
     "require_company_info": true,
@@ -14,7 +14,7 @@
   },
   "system_settings": {
     "repository_name": "av-licensing",
-    "github_username": "YOUR_GITHUB_USERNAME",
+    "github_username": "FakeSoundGuy",
     "webhook_secret": "your-webhook-secret"
   },
   "host_control": {
@@ -24,3 +24,4 @@
     "updated_by": "system"
   }
 }
+
