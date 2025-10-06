@@ -12,8 +12,8 @@ from datetime import datetime
 
 def validate_hardware_fingerprint(fingerprint):
     """Validate hardware fingerprint format"""
-    # Hardware fingerprint should be alphanumeric with dashes
-    pattern = r'^[A-Za-z0-9-]{32,64}$'
+    # Hardware fingerprint should be alphanumeric (16 characters for this system)
+    pattern = r'^[A-Za-z0-9]{16}$'
     return bool(re.match(pattern, fingerprint))
 
 def validate_email(email):
