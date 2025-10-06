@@ -1,0 +1,26 @@
+{
+  "activation_settings": {
+    "auto_approve": true,
+    "max_licenses": 100,
+    "license_duration_days": 30,
+    "reactivation_enabled": true,
+    "notification_email": "host@company.com"
+  },
+  "security_settings": {
+    "require_company_info": true,
+    "require_contact_email": true,
+    "blocked_domains": [],
+    "allowed_domains": []
+  },
+  "system_settings": {
+    "repository_name": "av-licensing",
+    "github_username": "YOUR_GITHUB_USERNAME",
+    "webhook_secret": "your-webhook-secret"
+  },
+  "host_control": {
+    "emergency_stop": false,
+    "maintenance_mode": false,
+    "last_updated": "2025-01-06T00:00:00Z",
+    "updated_by": "system"
+  }
+}
