@@ -7,6 +7,7 @@ Generates secure license files with 30-day expiration
 import json
 import hashlib
 import secrets
+import os
 from datetime import datetime, timedelta
 import sys
 import argparse
@@ -48,7 +49,7 @@ def main():
     args = parser.parse_args()
     
     # Validate inputs
-    if not args.fingerprint or len(args.fingerprint) < 32:
+    if not args.fingerprint or len(args.fingerprint) != 16:
         print("ERROR: Invalid hardware fingerprint", file=sys.stderr)
         sys.exit(1)
     
@@ -69,10 +70,12 @@ def main():
     print(f"::set-output name=license_key::{license_data['license_key']}")
     
     # Output for GitHub Actions (new format)
-    with open(os.environ.get('GITHUB_OUTPUT', '/dev/stdout'), 'a') as f:
-        f.write(f"license_data={json.dumps(license_data)}\n")
-        f.write(f"expires_date={license_data['expires_date']}\n")
-        f.write(f"license_key={license_data['license_key']}\n")
+    github_output = os.environ.get('GITHUB_OUTPUT')
+    if github_output:
+        with open(github_output, 'a') as f:
+            f.write(f"license_data={json.dumps(license_data)}\n")
+            f.write(f"expires_date={license_data['expires_date']}\n")
+            f.write(f"license_key={license_data['license_key']}\n")
     
     # Also print to stdout for debugging
     print(f"Generated license for {args.company}")
