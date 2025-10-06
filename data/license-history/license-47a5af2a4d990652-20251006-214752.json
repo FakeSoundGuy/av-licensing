@@ -1,0 +1,14 @@
+{
+  "license_key": "18347B63A66151CD3AB5D20D53C8E616",
+  "hardware_fingerprint": "47a5af2a4d990652",
+  "company_name": "AVS",
+  "contact_email": "qiyao.po@gmail.com",
+  "created_date": "2025-10-06T21:47:52.109Z",
+  "expires_date": "2025-11-05T21:47:52.086290",
+  "status": "active",
+  "version": "3.2.0",
+  "auto_generated": true,
+  "reactivation_required": true,
+  "generated_by": "github-actions",
+  "generation_method": "automated"
+}
