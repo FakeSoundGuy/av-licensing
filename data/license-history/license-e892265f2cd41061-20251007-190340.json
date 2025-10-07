@@ -1,0 +1,14 @@
+{
+  "license_key": "087830B2E9C0FCCBFC5C8004D16C3A4F",
+  "hardware_fingerprint": "e892265f2cd41061",
+  "company_name": "AVS",
+  "contact_email": "bwigfall@avsshows.com",
+  "created_date": "2025-10-07T19:03:40.586Z",
+  "expires_date": "2025-11-06T19:03:40.560359",
+  "status": "active",
+  "version": "3.2.0",
+  "auto_generated": true,
+  "reactivation_required": true,
+  "generated_by": "github-actions",
+  "generation_method": "automated"
+}
