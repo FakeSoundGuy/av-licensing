@@ -58,9 +58,12 @@ def main():
     # Find expiring licenses (within 5 days)
     expiring = find_expiring_licenses(licenses, days_ahead=5)
     
-    # Output results
-    print(f"::set-output name=total_licenses::{len(licenses)}")
-    print(f"::set-output name=expiring_count::{len(expiring)}")
+    # Output results for GitHub Actions (new format)
+    github_output = os.environ.get('GITHUB_OUTPUT')
+    if github_output:
+        with open(github_output, 'a') as f:
+            f.write(f"total_licenses={len(licenses)}\n")
+            f.write(f"expiring_count={len(expiring)}\n")
     
     # Save expiring licenses to file for other scripts
     with open('expiring_licenses.json', 'w') as f:
