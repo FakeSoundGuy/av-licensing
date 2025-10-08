@@ -28,16 +28,26 @@ jobs:
             echo "auto_approve=$(echo $CONFIG | jq -r '.activation_settings.auto_approve')" >> $GITHUB_OUTPUT
             echo "max_licenses=$(echo $CONFIG | jq -r '.activation_settings.max_licenses')" >> $GITHUB_OUTPUT
             echo "reactivation_enabled=$(echo $CONFIG | jq -r '.activation_settings.reactivation_enabled')" >> $GITHUB_OUTPUT
+            echo "minimum_version=$(echo $CONFIG | jq -r '.activation_settings.minimum_version // "3.2.4"')" >> $GITHUB_OUTPUT
+            echo "latest_version=$(echo $CONFIG | jq -r '.activation_settings.latest_version // "3.2.4"')" >> $GITHUB_OUTPUT
           else
             echo "auto_approve=true" >> $GITHUB_OUTPUT
             echo "max_licenses=100" >> $GITHUB_OUTPUT
             echo "reactivation_enabled=true" >> $GITHUB_OUTPUT
+            echo "minimum_version=3.2.4" >> $GITHUB_OUTPUT
+            echo "latest_version=3.2.4" >> $GITHUB_OUTPUT
           fi
       
       - name: Validate Request
         id: validate
         run: |
           python3 scripts/validate-request.py "${{ github.event.issue.title }}" "${{ github.event.issue.body }}"
+      
+      - name: Validate Software Version
+        id: version
+        run: |
+          python3 scripts/validate-version.py "${{ github.event.issue.title }}" "${{ github.event.issue.body }}"
+        continue-on-error: true
       
       - name: Check License Limits
         id: limits
@@ -52,7 +62,7 @@ jobs:
       
       - name: Generate License
         id: generate
-        if: steps.config.outputs.auto_approve == 'true' && steps.limits.outputs.limit_exceeded == 'false'
+        if: steps.config.outputs.auto_approve == 'true' && steps.limits.outputs.limit_exceeded == 'false' && steps.version.outputs.version_valid == 'true'
         run: |
           python3 scripts/generate-license.py \
             --fingerprint "${{ steps.validate.outputs.fingerprint }}" \
@@ -61,7 +71,7 @@ jobs:
             --duration 30
       
       - name: Create License File
-        if: steps.config.outputs.auto_approve == 'true' && steps.limits.outputs.limit_exceeded == 'false'
+        if: steps.config.outputs.auto_approve == 'true' && steps.limits.outputs.limit_exceeded == 'false' && steps.version.outputs.version_valid == 'true'
         run: |
           LICENSE_FILE="data/active-licenses/license-${{ steps.validate.outputs.fingerprint }}.json"
           # Create proper JSON license file
@@ -93,7 +103,7 @@ jobs:
           git push
       
       - name: Close Issue with License Info
-        if: steps.config.outputs.auto_approve == 'true' && steps.limits.outputs.limit_exceeded == 'false'
+        if: steps.config.outputs.auto_approve == 'true' && steps.limits.outputs.limit_exceeded == 'false' && steps.version.outputs.version_valid == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -152,4 +162,51 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'closed'
+            });
+      
+      - name: Reject Outdated Version
+        if: steps.version.outputs.version_valid != 'true' && github.event.issue.pull_request == null
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const versionMessage = '${{ steps.version.outputs.version_message }}';
+            const clientVersion = '${{ steps.version.outputs.client_version }}';
+            const minimumVersion = '${{ steps.config.outputs.minimum_version }}';
+            const latestVersion = '${{ steps.config.outputs.latest_version }}';
+            const warningOnly = '${{ steps.version.outputs.warning_only }}' === 'true';
+            
+            const body = '❌ **License Request Rejected - Outdated Software Version**\n\n' +
+              '**Version Information:**\n' +
+              '- Your Version: ' + clientVersion + '\n' +
+              '- Minimum Required: ' + minimumVersion + '\n' +
+              '- Latest Version: ' + latestVersion + '\n\n' +
+              '**Reason:**\n' +
+              versionMessage + '\n\n' +
+              '**Action Required:**\n' +
+              '1. Contact your software vendor to obtain version ' + latestVersion + '\n' +
+              '2. Install the updated software\n' +
+              '3. Request activation again with the new version\n\n' +
+              '**Why Update?**\n' +
+              '- Latest bug fixes and improvements\n' +
+              '- Enhanced features and performance\n' +
+              '- Better security\n' +
+              '- Improved user experience\n\n' +
+              'Using outdated software may result in compatibility issues and missing features.\n\n' +
+              '**Support Contact:**\n' +
+              'For assistance with updating your software, contact:\n' +
+              'chengchao.josh.huang@gmail.com';
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+            
+            await github.rest.issues.update({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed',
+              labels: ['rejected', 'outdated-version']
             });
