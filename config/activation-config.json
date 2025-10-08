@@ -4,7 +4,11 @@
     "max_licenses": 100,
     "license_duration_days": 30,
     "reactivation_enabled": true,
-    "notification_email": "chengchao.josh.huang@gmail.com"
+    "notification_email": "chengchao.josh.huang@gmail.com",
+    "minimum_version": "3.2.4",
+    "latest_version": "3.2.4",
+    "enforce_version_check": true,
+    "allow_older_reactivations": true
   },
   "security_settings": {
     "require_company_info": true,
