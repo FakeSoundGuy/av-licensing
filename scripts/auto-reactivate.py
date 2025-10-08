@@ -73,9 +73,12 @@ def main():
         except Exception as e:
             print(f"Error reactivating license for {license_data.get('company_name', 'Unknown')}: {e}", file=sys.stderr)
     
-    # Output results
-    print(f"::set-output name=reactivated_count::{reactivated_count}")
-    print(f"::set-output name=total_expiring::{len(expiring_licenses)}")
+    # Output results for GitHub Actions (new format)
+    github_output = os.environ.get('GITHUB_OUTPUT')
+    if github_output:
+        with open(github_output, 'a') as f:
+            f.write(f"reactivated_count={reactivated_count}\n")
+            f.write(f"total_expiring={len(expiring_licenses)}\n")
     
     print(f"\nReactivation Summary:")
     print(f"  Total expiring licenses: {len(expiring_licenses)}")
