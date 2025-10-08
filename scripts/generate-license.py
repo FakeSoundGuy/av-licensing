@@ -64,11 +64,6 @@ def main():
     # Generate license
     license_data = create_license(args.fingerprint, args.company, args.email, args.duration)
     
-    # Output for GitHub Actions (legacy format)
-    print(f"::set-output name=license_data::{json.dumps(license_data)}")
-    print(f"::set-output name=expires_date::{license_data['expires_date']}")
-    print(f"::set-output name=license_key::{license_data['license_key']}")
-    
     # Output for GitHub Actions (new format)
     github_output = os.environ.get('GITHUB_OUTPUT')
     if github_output:
